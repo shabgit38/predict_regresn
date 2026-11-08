@@ -2,43 +2,74 @@
 
 from __future__ import annotations
 
+import os
+import re
+from datetime import datetime, timedelta
+
 import pandas as pd
-import yfinance as yf
+from kiteconnect import KiteConnect
 
 
-def _extract_column(data: pd.DataFrame, field: str, ticker: str) -> pd.Series:
-    """Extract one field from yfinance's single- or multi-ticker column layouts."""
-    if isinstance(data.columns, pd.MultiIndex):
-        for key in ((ticker, field), (field, ticker)):
-            if key in data.columns:
-                return data[key]
-        raise ValueError(f"{field!r} data for {ticker!r} was not returned by Yahoo Finance.")
+def _period_start(period: str, end: datetime) -> datetime:
+    """Convert a duration such as 10y or 6mo into its start date."""
+    match = re.fullmatch(r"(\d+)(d|mo|y)", period.lower())
+    if match is None:
+        raise ValueError("Period must be a positive number followed by d, mo, or y (for example 10y).")
+    amount = int(match.group(1))
+    if amount < 1:
+        raise ValueError("Period must be greater than zero.")
+    unit = match.group(2)
+    if unit == "d":
+        return end - timedelta(days=amount)
+    months = amount * (12 if unit == "y" else 1)
+    return end - pd.DateOffset(months=months)
 
-    if field not in data.columns:
-        raise ValueError(f"{field!r} data for {ticker!r} was not returned by Yahoo Finance.")
-    return data[field]
 
+def download_market_data(
+    ticker: str,
+    benchmark: str,
+    period: str = "10y",
+    exchange: str = "NSE",
+) -> pd.DataFrame:
+    """Download daily close and volume candles for a stock and its benchmark from Kite."""
+    api_key = os.environ.get("KITE_API_KEY")
+    access_token = os.environ.get("KITE_ACCESS_TOKEN")
+    if not api_key or not access_token:
+        raise ValueError("Set the KITE_API_KEY and KITE_ACCESS_TOKEN environment variables.")
 
-def download_market_data(ticker: str, benchmark: str, period: str = "10y") -> pd.DataFrame:
-    """Download adjusted daily close and volume for a stock and its benchmark."""
+    client = KiteConnect(api_key=api_key)
+    client.set_access_token(access_token)
+    exchange = exchange.upper()
     symbols = list(dict.fromkeys((ticker.upper(), benchmark.upper())))
-    downloaded = yf.download(
-        symbols,
-        period=period,
-        interval="1d",
-        auto_adjust=True,
-        progress=False,
-        group_by="ticker",
-        threads=False,
-    )
-    if downloaded.empty:
-        raise ValueError("Yahoo Finance returned no market data for the requested symbols.")
-
-    data = pd.DataFrame(index=downloaded.index)
+    instruments = client.instruments(exchange)
+    tokens: dict[str, int] = {}
     for symbol in symbols:
-        data[f"{symbol}_close"] = _extract_column(downloaded, "Close", symbol)
-    data[f"{ticker.upper()}_volume"] = _extract_column(downloaded, "Volume", ticker.upper())
+        match = next(
+            (
+                instrument
+                for instrument in instruments
+                if instrument["tradingsymbol"].upper() == symbol
+                and instrument["exchange"].upper() == exchange
+            ),
+            None,
+        )
+        if match is None:
+            raise ValueError(f"Instrument {symbol!r} was not found on the {exchange} exchange.")
+        tokens[symbol] = int(match["instrument_token"])
 
-    data = data.sort_index()
-    data.index = pd.to_datetime(data.index).tz_localize(None)
-    return data
+    end = datetime.now()
+    start = _period_start(period, end)
+    data = pd.DataFrame()
+    for symbol in symbols:
+        candles = client.historical_data(tokens[symbol], start, end, "day")
+        if not candles:
+            raise ValueError(f"Kite Connect returned no historical data for {symbol!r}.")
+        frame = pd.DataFrame(candles)
+        frame["date"] = pd.to_datetime(frame["date"])
+        frame = frame.set_index("date").sort_index()
+        data[f"{symbol}_close"] = frame["close"]
+        if symbol == ticker.upper():
+            data[f"{symbol}_volume"] = frame["volume"]
+
+    data.index = pd.DatetimeIndex(data.index).tz_localize(None)
+    return data.sort_index()

@@ -10,13 +10,14 @@ from stock_returns.model import fit_and_evaluate
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Predict the next trading day's stock return.")
-    parser.add_argument("--ticker", default="AAPL", help="Stock ticker symbol (default: AAPL).")
-    parser.add_argument("--benchmark", default="SPY", help="Market benchmark (default: SPY).")
-    parser.add_argument("--period", default="10y", help="Yahoo Finance history period (default: 10y).")
+    parser = argparse.ArgumentParser(description="Predict the next trading day's stock return using Kite Connect data.")
+    parser.add_argument("--ticker", default="RELIANCE", help="Stock trading symbol (default: RELIANCE).")
+    parser.add_argument("--benchmark", default="NIFTY 50", help="Benchmark trading symbol (default: NIFTY 50).")
+    parser.add_argument("--exchange", default="NSE", help="Kite exchange (default: NSE).")
+    parser.add_argument("--period", default="10y", help="History duration, such as 10y, 6mo, or 90d (default: 10y).")
     args = parser.parse_args()
 
-    data = download_market_data(args.ticker, args.benchmark, args.period)
+    data = download_market_data(args.ticker, args.benchmark, args.period, args.exchange)
     features, target = build_features(data, args.ticker, args.benchmark)
     result = fit_and_evaluate(features, target)
 

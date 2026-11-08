@@ -8,7 +8,7 @@ import pandas as pd
 def build_features(data: pd.DataFrame, ticker: str, benchmark: str) -> tuple[pd.DataFrame, pd.Series]:
     """Build features known at close and the following session's stock return.
 
-    `data` must contain adjusted-close columns named `<SYMBOL>_close` and a
+    `data` must contain close-price columns named `<SYMBOL>_close` and a
     `<TICKER>_volume` column. The target is aligned to the feature date.
     """
     ticker = ticker.upper()
