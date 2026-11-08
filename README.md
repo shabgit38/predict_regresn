@@ -19,14 +19,15 @@ Use Python 3.10 or later:
 py -m venv .venv
 .\.venv\Scripts\Activate.ps1
 python -m pip install -r requirements.txt
-$env:KITE_API_KEY = "your_api_key"
-$env:KITE_ACCESS_TOKEN = "your_access_token"
+Copy-Item .env.example .env
+# Edit .env and set KITE_API_KEY and KITE_API_SECRET from your Kite Connect app.
+python -m stock_returns.cli --login
 python -m stock_returns.cli --ticker RELIANCE --benchmark "NIFTY 50" --exchange NSE --period 10y
 ```
 
 If PowerShell prevents environment activation, run `.venv\Scripts\python.exe -m pip install -r requirements.txt` and then `.venv\Scripts\python.exe -m stock_returns.cli ...`.
 
-Set `KITE_API_KEY` and `KITE_ACCESS_TOKEN` from your Kite Connect app/session before running the command. Do not commit credentials. Kite symbols and benchmarks must exist on the selected exchange; use `--ticker`, `--benchmark`, and `--exchange` to select them. The benchmark is used to calculate relative-strength features; it is not itself a prediction target. `--period` accepts durations such as `10y`, `6mo`, and `90d`.
+Copy `.env.example` to `.env` and add your Kite Connect API key and API secret. Run `python -m stock_returns.cli --login`; this opens Kite's login page, then prompts you to paste the redirected URL or its `request_token`. The exchanged access token is saved to `.env`. Kite access tokens expire, so repeat the login when prompted by an authentication error. Keep `.env` private and never commit it. Kite symbols and benchmarks must exist on the selected exchange; use `--ticker`, `--benchmark`, and `--exchange` to select them. The benchmark is used to calculate relative-strength features; it is not itself a prediction target. `--period` accepts durations such as `10y`, `6mo`, and `90d`.
 
 ## Output
 

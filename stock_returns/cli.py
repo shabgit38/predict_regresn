@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 
+from stock_returns.auth import login_to_kite
 from stock_returns.data import download_market_data
 from stock_returns.features import build_features
 from stock_returns.model import fit_and_evaluate
@@ -15,7 +16,12 @@ def main() -> None:
     parser.add_argument("--benchmark", default="NIFTY 50", help="Benchmark trading symbol (default: NIFTY 50).")
     parser.add_argument("--exchange", default="NSE", help="Kite exchange (default: NSE).")
     parser.add_argument("--period", default="10y", help="History duration, such as 10y, 6mo, or 90d (default: 10y).")
+    parser.add_argument("--login", action="store_true", help="Log in to Kite and save a new access token.")
     args = parser.parse_args()
+
+    if args.login:
+        login_to_kite()
+        return
 
     data = download_market_data(args.ticker, args.benchmark, args.period, args.exchange)
     features, target = build_features(data, args.ticker, args.benchmark)

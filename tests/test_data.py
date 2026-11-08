@@ -5,12 +5,16 @@ import unittest
 from unittest.mock import patch
 
 import pandas as pd
+from kiteconnect.exceptions import TokenException
 
 from stock_returns.data import download_market_data
 
 
 class DownloadMarketDataTests(unittest.TestCase):
     def setUp(self) -> None:
+        env_loader = patch("stock_returns.auth.load_dotenv")
+        env_loader.start()
+        self.addCleanup(env_loader.stop)
         self.instruments = [
             {"tradingsymbol": "ABC", "exchange": "NSE", "instrument_token": 123},
             {"tradingsymbol": "NIFTY 50", "exchange": "NSE", "instrument_token": 456},
@@ -44,7 +48,12 @@ class DownloadMarketDataTests(unittest.TestCase):
 
     @patch.dict(os.environ, {}, clear=True)
     def test_requires_kite_credentials(self) -> None:
-        with self.assertRaisesRegex(ValueError, "KITE_API_KEY and KITE_ACCESS_TOKEN"):
+        with self.assertRaisesRegex(ValueError, "KITE_API_KEY"):
+            download_market_data("ABC", "NIFTY 50")
+
+    @patch.dict(os.environ, {"KITE_API_KEY": "test-key"}, clear=True)
+    def test_requires_access_token(self) -> None:
+        with self.assertRaisesRegex(ValueError, "KITE_ACCESS_TOKEN.*--login"):
             download_market_data("ABC", "NIFTY 50")
 
     @patch.dict(os.environ, {"KITE_API_KEY": "test-key", "KITE_ACCESS_TOKEN": "test-token"})
@@ -53,6 +62,14 @@ class DownloadMarketDataTests(unittest.TestCase):
         kite_connect.return_value.instruments.return_value = self.instruments[:1]
 
         with self.assertRaisesRegex(ValueError, "NIFTY 50.*not found"):
+            download_market_data("ABC", "NIFTY 50")
+
+    @patch.dict(os.environ, {"KITE_API_KEY": "test-key", "KITE_ACCESS_TOKEN": "expired-token"})
+    @patch("stock_returns.data.KiteConnect")
+    def test_expired_access_token_points_to_login(self, kite_connect: unittest.mock.Mock) -> None:
+        kite_connect.return_value.instruments.side_effect = TokenException("Token is invalid")
+
+        with self.assertRaisesRegex(RuntimeError, "expired or is invalid.*--login"):
             download_market_data("ABC", "NIFTY 50")
 
 

@@ -8,6 +8,9 @@ from datetime import datetime, timedelta
 
 import pandas as pd
 from kiteconnect import KiteConnect
+from kiteconnect.exceptions import TokenException
+
+from stock_returns.auth import load_kite_environment
 
 
 def _period_start(period: str, end: datetime) -> datetime:
@@ -32,44 +35,50 @@ def download_market_data(
     exchange: str = "NSE",
 ) -> pd.DataFrame:
     """Download daily close and volume candles for a stock and its benchmark from Kite."""
+    load_kite_environment()
     api_key = os.environ.get("KITE_API_KEY")
     access_token = os.environ.get("KITE_ACCESS_TOKEN")
-    if not api_key or not access_token:
-        raise ValueError("Set the KITE_API_KEY and KITE_ACCESS_TOKEN environment variables.")
+    if not api_key:
+        raise ValueError("Set KITE_API_KEY in the project .env file or environment.")
+    if not access_token:
+        raise ValueError("No KITE_ACCESS_TOKEN was found. Run the CLI with --login.")
 
     client = KiteConnect(api_key=api_key)
     client.set_access_token(access_token)
     exchange = exchange.upper()
     symbols = list(dict.fromkeys((ticker.upper(), benchmark.upper())))
-    instruments = client.instruments(exchange)
-    tokens: dict[str, int] = {}
-    for symbol in symbols:
-        match = next(
-            (
-                instrument
-                for instrument in instruments
-                if instrument["tradingsymbol"].upper() == symbol
-                and instrument["exchange"].upper() == exchange
-            ),
-            None,
-        )
-        if match is None:
-            raise ValueError(f"Instrument {symbol!r} was not found on the {exchange} exchange.")
-        tokens[symbol] = int(match["instrument_token"])
+    try:
+        instruments = client.instruments(exchange)
+        tokens: dict[str, int] = {}
+        for symbol in symbols:
+            match = next(
+                (
+                    instrument
+                    for instrument in instruments
+                    if instrument["tradingsymbol"].upper() == symbol
+                    and instrument["exchange"].upper() == exchange
+                ),
+                None,
+            )
+            if match is None:
+                raise ValueError(f"Instrument {symbol!r} was not found on the {exchange} exchange.")
+            tokens[symbol] = int(match["instrument_token"])
 
-    end = datetime.now()
-    start = _period_start(period, end)
-    data = pd.DataFrame()
-    for symbol in symbols:
-        candles = client.historical_data(tokens[symbol], start, end, "day")
-        if not candles:
-            raise ValueError(f"Kite Connect returned no historical data for {symbol!r}.")
-        frame = pd.DataFrame(candles)
-        frame["date"] = pd.to_datetime(frame["date"])
-        frame = frame.set_index("date").sort_index()
-        data[f"{symbol}_close"] = frame["close"]
-        if symbol == ticker.upper():
-            data[f"{symbol}_volume"] = frame["volume"]
+        end = datetime.now()
+        start = _period_start(period, end)
+        data = pd.DataFrame()
+        for symbol in symbols:
+            candles = client.historical_data(tokens[symbol], start, end, "day")
+            if not candles:
+                raise ValueError(f"Kite Connect returned no historical data for {symbol!r}.")
+            frame = pd.DataFrame(candles)
+            frame["date"] = pd.to_datetime(frame["date"])
+            frame = frame.set_index("date").sort_index()
+            data[f"{symbol}_close"] = frame["close"]
+            if symbol == ticker.upper():
+                data[f"{symbol}_volume"] = frame["volume"]
+    except TokenException as exc:
+        raise RuntimeError("Kite access token expired or is invalid. Run the CLI with --login.") from exc
 
     data.index = pd.DatetimeIndex(data.index).tz_localize(None)
     return data.sort_index()
