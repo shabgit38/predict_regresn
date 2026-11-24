@@ -20,10 +20,10 @@ py -m venv .venv
 .\.venv\Scripts\python.exe -m pip install -r requirements.txt
 if (!(Test-Path .env)) { Copy-Item .env.example .env }
 # Edit .env and set KITE_API_KEY and KITE_API_SECRET from your Kite Connect app.
-.\.venv\Scripts\python.exe -m streamlit run stock_returns/app.py --server.address 127.0.0.1
+.\.venv\Scripts\python.exe -m streamlit run app.py --server.address 127.0.0.1
 ```
 
-The app opens in your browser. In the sidebar, open Kite login, sign in, and paste the redirected URL or `request_token` to connect. Then enter:
+The app opens in your browser. In your Kite Connect app settings, set the **Redirect URL** to `http://127.0.0.1:8501/`. Click **Login to Kite** in the app sidebar and sign in; Kite redirects back to the app, which exchanges the request token automatically. Then enter:
 
 - **Ticker:** Kite stock symbol, such as `RELIANCE` or `INFY`
 - **Benchmark:** Kite symbol, such as `NIFTY 50` or `SENSEX`
@@ -32,7 +32,7 @@ The app opens in your browser. In the sidebar, open Kite login, sign in, and pas
 
 The app binds to `127.0.0.1`, so it is only available on your computer. No environment activation is needed; use the `.venv\Scripts\python.exe` commands shown above.
 
-The app loads your Kite API key and API secret from `.env`. In the sidebar, open Kite login, sign in, and paste the redirected URL or its `request_token`; the exchanged access token is saved to `.env`. If the token expires, repeat this login flow. Keep `.env` private and never commit it. Enter Kite stock and benchmark symbols that exist on the selected exchange. The benchmark is used for relative-strength features, not as the prediction target. Duration accepts values such as `5y`, `6mo`, and `90d`.
+The app loads your Kite API key and API secret from `.env`. The login callback saves the exchanged access token to `.env`. If the token expires, click **Login to Kite** again. Keep `.env` private and never commit it. Enter Kite stock and benchmark symbols that exist on the selected exchange. The benchmark is used for relative-strength features, not as the prediction target. Duration accepts values such as `5y`, `6mo`, and `90d`.
 
 ## Results
 

@@ -29,8 +29,9 @@ st.markdown(
     <style>
     .block-container { max-width: 1100px; padding-top: 2rem; }
     [data-testid="stMetric"] {
-        background: #f5f7fa;
-        border: 1px solid #e5e9f0;
+        background: var(--secondary-background-color);
+        border: 1px solid rgba(128, 128, 128, 0.3);
+        color: var(--text-color);
         padding: 1rem;
         border-radius: 0.75rem;
     }
@@ -41,6 +42,21 @@ st.markdown(
 
 load_kite_environment()
 
+request_token = st.query_params.get("request_token")
+login_status = st.query_params.get("status")
+if request_token or login_status in {"success", "error"}:
+    st.query_params.clear()
+    if request_token and login_status != "error":
+        try:
+            exchange_kite_request_token(request_token)
+        except (KiteException, OSError, RequestException, ValueError) as exc:
+            st.session_state["kite_login_error"] = f"Kite login failed: {exc}"
+        else:
+            st.session_state["kite_login_success"] = True
+    else:
+        st.session_state["kite_login_error"] = "Kite login was not completed. Please try again."
+    st.rerun()
+
 st.title("Stock Return Research")
 st.caption(
     "Configure a stock, benchmark, and history window to evaluate the next-session "
@@ -49,33 +65,27 @@ st.caption(
 
 with st.sidebar:
     st.subheader("Kite Connect")
+    if st.session_state.pop("kite_login_success", False):
+        st.success("Kite login successful. Access token saved locally.")
+    login_error = st.session_state.pop("kite_login_error", None)
+    if login_error:
+        st.error(login_error)
+
     if os.environ.get("KITE_ACCESS_TOKEN"):
         st.success("Access token is configured.")
     else:
-        st.info("Connect your Kite account to download market data.")
+        st.info("Log in to your Kite account to download market data.")
 
     try:
         login_url = get_kite_login_url()
     except ValueError as exc:
         st.error(str(exc))
     else:
-        st.link_button("Open Kite login", login_url, use_container_width=True)
-        request_token = st.text_input(
-            "Redirect URL or request token",
-            placeholder="Paste the URL containing request_token=... or the token",
-            type="password",
+        st.link_button(
+            "Login to Kite",
+            login_url,
+            use_container_width=True,
         )
-        if st.button("Connect to Kite", use_container_width=True):
-            if not request_token.strip():
-                st.error("Paste the Kite redirect URL or request token first.")
-            else:
-                try:
-                    exchange_kite_request_token(request_token)
-                except (KiteException, OSError, RequestException, ValueError) as exc:
-                    st.error(f"Kite login failed: {exc}")
-                else:
-                    st.success("Kite access token saved locally.")
-                    st.rerun()
 
 st.subheader("Model inputs")
 with st.form("model_inputs"):

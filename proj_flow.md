@@ -8,13 +8,13 @@ This project predicts the next trading day's close-to-close stock return using d
 
 1. **Authenticate with Kite Connect**
    - `stock_returns/auth.py` loads project credentials from `.env`.
-   - The app sidebar opens the Kite login page, accepts a redirect URL or request token, exchanges it for an access token, and saves the token to `.env`.
+   - The app's **Login to Kite** button opens the Kite login page. Kite redirects to the local app, which exchanges the request token and saves the access token to `.env`.
    - Kite access tokens may expire and must be renewed through the login flow.
 
 2. **Select inputs and download data**
-   - `stock_returns/app.py` provides a local browser form for ticker, benchmark, exchange, and history duration. Start it with `python -m streamlit run stock_returns/app.py --server.address 127.0.0.1`.
+   - Root-level `app.py` provides a local browser form for ticker, benchmark, exchange, and history duration. Start it with `python -m streamlit run app.py --server.address 127.0.0.1`.
    - Input hints show ticker examples (`RELIANCE`, `INFY`), benchmark examples (`NIFTY 50`, `SENSEX`), and duration formats (`5y`, `6mo`, `90d`).
-   - The sidebar provides a Kite login link and accepts a redirect URL or request token to save an access token locally.
+   - The sidebar provides a single Kite login button; the Kite app's Redirect URL must point to `http://127.0.0.1:8501/` for automatic local callback without manually pasting a token.
    - `stock_returns/data.py` resolves the stock and benchmark symbols to Kite instrument tokens.
    - It downloads daily close prices and stock volume, normalizes timezone information, sorts observations chronologically, and aligns both symbols by date.
 
@@ -31,7 +31,7 @@ This project predicts the next trading day's close-to-close stock return using d
    - It reports MAE, RMSE, directional accuracy, test-period boundaries, and ranked feature importances.
 
 5. **Present results**
-   - `stock_returns/app.py` displays the selected symbols, evaluation period, metrics, test observation count, and a feature-importance chart/table.
+   - Root-level `app.py` displays the selected symbols, evaluation period, metrics, test observation count, and a feature-importance chart/table.
    - `stock_returns/cli.py` remains available as an optional terminal interface.
 
 ## Current project structure
@@ -40,7 +40,7 @@ This project predicts the next trading day's close-to-close stock return using d
 - `stock_returns/data.py`: period parsing, instrument lookup, and historical data download
 - `stock_returns/features.py`: feature and target construction
 - `stock_returns/model.py`: chronological split, XGBoost fitting, and evaluation
-- `stock_returns/app.py`: local browser interface, Kite login, and model results
+- `app.py`: local browser interface, Kite login, and model results
 - `stock_returns/cli.py`: optional command-line interface
 - `tests/`: unit tests for authentication, UI rendering, data download, and feature construction
 
