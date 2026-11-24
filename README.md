@@ -17,28 +17,33 @@ Use Python 3.10 or later:
 
 ```powershell
 py -m venv .venv
-.\.venv\Scripts\Activate.ps1
-python -m pip install -r requirements.txt
-Copy-Item .env.example .env
+.\.venv\Scripts\python.exe -m pip install -r requirements.txt
+if (!(Test-Path .env)) { Copy-Item .env.example .env }
 # Edit .env and set KITE_API_KEY and KITE_API_SECRET from your Kite Connect app.
-python -m stock_returns.cli --login
-python -m stock_returns.cli --ticker RELIANCE --benchmark "NIFTY 50" --exchange NSE --period 10y
+.\.venv\Scripts\python.exe -m streamlit run stock_returns/app.py --server.address 127.0.0.1
 ```
 
-If PowerShell prevents environment activation, run `.venv\Scripts\python.exe -m pip install -r requirements.txt` and then `.venv\Scripts\python.exe -m stock_returns.cli ...`.
+The app opens in your browser. In the sidebar, open Kite login, sign in, and paste the redirected URL or `request_token` to connect. Then enter:
 
-Copy `.env.example` to `.env` and add your Kite Connect API key and API secret. Run `python -m stock_returns.cli --login`; this opens Kite's login page, then prompts you to paste the redirected URL or its `request_token`. The exchanged access token is saved to `.env`. Kite access tokens expire, so repeat the login when prompted by an authentication error. Keep `.env` private and never commit it. Kite symbols and benchmarks must exist on the selected exchange; use `--ticker`, `--benchmark`, and `--exchange` to select them. The benchmark is used to calculate relative-strength features; it is not itself a prediction target. `--period` accepts durations such as `10y`, `6mo`, and `90d`.
+- **Ticker:** Kite stock symbol, such as `RELIANCE` or `INFY`
+- **Benchmark:** Kite symbol, such as `NIFTY 50` or `SENSEX`
+- **Exchange:** Kite exchange code, such as `NSE` or `BSE`
+- **History duration:** number plus unit, such as `5y`, `6mo`, or `90d`
 
-## Output
+The app binds to `127.0.0.1`, so it is only available on your computer. No environment activation is needed; use the `.venv\Scripts\python.exe` commands shown above.
 
-The command prints the selected feature names, the chronological test-period boundaries, MAE, RMSE, directional accuracy, and the most influential features from the fitted XGBoost model.
+The app loads your Kite API key and API secret from `.env`. In the sidebar, open Kite login, sign in, and paste the redirected URL or its `request_token`; the exchanged access token is saved to `.env`. If the token expires, repeat this login flow. Keep `.env` private and never commit it. Enter Kite stock and benchmark symbols that exist on the selected exchange. The benchmark is used for relative-strength features, not as the prediction target. Duration accepts values such as `5y`, `6mo`, and `90d`.
+
+## Results
+
+The app displays MAE, RMSE, directional accuracy, test-period boundaries, test observation count, and a chart/table of the most influential features from the fitted XGBoost model. These are historical holdout evaluation results, not a forecast of a specific future return.
 
 Kite historical candles provide close prices, not split/dividend-adjusted closes. Each feature row is computed from information available at that row's market close. The target is the following trading session's return. The final row, which has no known next-session return, is excluded. Rows with incomplete rolling windows are also excluded.
 
 ## Tests
 
 ```powershell
-python -m unittest discover -s tests -v
+.\.venv\Scripts\python.exe -m unittest discover -s tests -v
 ```
 
 Tests use synthetic data and do not require a network connection.

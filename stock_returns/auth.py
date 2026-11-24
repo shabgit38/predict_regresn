@@ -36,19 +36,20 @@ def _get_request_token(value: str) -> str:
     raise ValueError("The supplied value does not contain a Kite request_token.")
 
 
-def login_to_kite() -> str:
-    """Open Kite login, exchange the returned request token, and save the access token."""
+def get_kite_login_url() -> str:
+    """Create the Kite login URL using the configured API key."""
+    load_kite_environment()
+    api_key = _required_secret("KITE_API_KEY")
+    return KiteConnect(api_key=api_key).login_url()
+
+
+def exchange_kite_request_token(value: str) -> str:
+    """Exchange a request token or redirect URL and save the access token."""
     load_kite_environment()
     api_key = _required_secret("KITE_API_KEY")
     api_secret = _required_secret("KITE_API_SECRET")
-
     client = KiteConnect(api_key=api_key)
-    login_url = client.login_url()
-    print(f"Kite login URL: {login_url}")
-    webbrowser.open(login_url)
-    request_token = _get_request_token(
-        getpass.getpass("Paste the redirected URL or request_token: ").strip()
-    )
+    request_token = _get_request_token(value)
     session = client.generate_session(request_token, api_secret)
     access_token = session["access_token"]
 
@@ -61,5 +62,16 @@ def login_to_kite() -> str:
     if not success or key != "KITE_ACCESS_TOKEN":
         raise OSError(f"Could not save the Kite access token to {ENV_FILE}.")
     os.environ["KITE_ACCESS_TOKEN"] = access_token
+    return access_token
+
+
+def login_to_kite() -> str:
+    """Open Kite login, exchange the returned request token, and save the access token."""
+    login_url = get_kite_login_url()
+    print(f"Kite login URL: {login_url}")
+    webbrowser.open(login_url)
+    access_token = exchange_kite_request_token(
+        getpass.getpass("Paste the redirected URL or request_token: ").strip()
+    )
     print(f"Kite login successful. Access token saved to {ENV_FILE}.")
     return access_token

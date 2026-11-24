@@ -14,10 +14,10 @@ from stock_returns.auth import load_kite_environment
 
 
 def _period_start(period: str, end: datetime) -> datetime:
-    """Convert a duration such as 10y or 6mo into its start date."""
+    """Convert a duration such as 5y or 6mo into its start date."""
     match = re.fullmatch(r"(\d+)(d|mo|y)", period.lower())
     if match is None:
-        raise ValueError("Period must be a positive number followed by d, mo, or y (for example 10y).")
+        raise ValueError("Period must be a positive number followed by d, mo, or y (for example 5y).")
     amount = int(match.group(1))
     if amount < 1:
         raise ValueError("Period must be greater than zero.")
@@ -31,7 +31,7 @@ def _period_start(period: str, end: datetime) -> datetime:
 def download_market_data(
     ticker: str,
     benchmark: str,
-    period: str = "10y",
+    period: str = "5y",
     exchange: str = "NSE",
 ) -> pd.DataFrame:
     """Download daily close and volume candles for a stock and its benchmark from Kite."""

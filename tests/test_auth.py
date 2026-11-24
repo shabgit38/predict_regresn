@@ -8,7 +8,7 @@ from unittest.mock import patch
 
 from dotenv import dotenv_values
 
-from stock_returns.auth import _get_request_token, login_to_kite
+from stock_returns.auth import _get_request_token, exchange_kite_request_token, login_to_kite
 
 
 class KiteAuthTests(unittest.TestCase):
@@ -22,6 +22,28 @@ class KiteAuthTests(unittest.TestCase):
     def test_rejects_redirect_without_request_token(self) -> None:
         with self.assertRaisesRegex(ValueError, "does not contain"):
             _get_request_token("https://localhost/?status=success")
+
+    @patch.dict(os.environ, {}, clear=True)
+    @patch("stock_returns.auth.KiteConnect")
+    def test_request_token_exchange_saves_access_token(
+        self,
+        kite_connect: unittest.mock.Mock,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            env_file = Path(temporary_directory) / ".env"
+            env_file.write_text("KITE_API_KEY=test-key\nKITE_API_SECRET=test-secret\n", encoding="utf-8")
+            client = kite_connect.return_value
+            client.generate_session.return_value = {"access_token": "new-access-token"}
+
+            with patch("stock_returns.auth.ENV_FILE", env_file):
+                access_token = exchange_kite_request_token(
+                    "https://localhost/?request_token=req123"
+                )
+
+            self.assertEqual(access_token, "new-access-token")
+            client.generate_session.assert_called_once_with("req123", "test-secret")
+            self.assertEqual(dotenv_values(env_file)["KITE_ACCESS_TOKEN"], "new-access-token")
+            self.assertEqual(os.environ["KITE_ACCESS_TOKEN"], "new-access-token")
 
     @patch.dict(os.environ, {}, clear=True)
     @patch("stock_returns.auth.KiteConnect")
