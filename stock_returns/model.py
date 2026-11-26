@@ -15,6 +15,9 @@ class Evaluation:
     train_end: pd.Timestamp
     test_start: pd.Timestamp
     test_end: pd.Timestamp
+    y_train: pd.Series
+    y_test: pd.Series
+    predictions: np.ndarray
     mae: float
     rmse: float
     directional_accuracy: float
@@ -58,6 +61,9 @@ def fit_and_evaluate(
         train_end=features.index[split_at - 1],
         test_start=features.index[split_at],
         test_end=features.index[-1],
+        y_train=y_train,
+        y_test=y_test,
+        predictions=predictions,
         mae=float(mean_absolute_error(y_test, predictions)),
         rmse=float(np.sqrt(mean_squared_error(y_test, predictions))),
         directional_accuracy=float(np.mean(np.sign(predictions) == np.sign(y_test.to_numpy()))),

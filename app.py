@@ -9,6 +9,7 @@ import streamlit as st
 from kiteconnect.exceptions import KiteException
 from requests.exceptions import RequestException
 
+from baseline_report import build_report, render_report
 from stock_returns.auth import (
     exchange_kite_request_token,
     get_kite_login_url,
@@ -134,6 +135,7 @@ if submitted:
                 data = download_market_data(ticker, benchmark, period, exchange)
                 features, target = build_features(data, ticker, benchmark)
                 result = fit_and_evaluate(features, target)
+                report = build_report(result.y_train, result.y_test, result.predictions)
         except (KiteException, OSError, RequestException, RuntimeError, ValueError) as exc:
             st.error(f"Could not complete the evaluation: {exc}")
         else:
@@ -144,11 +146,8 @@ if submitted:
             )
 
             test_observations = len(features.loc[result.test_start :])
-            metric_columns = st.columns(4)
-            metric_columns[0].metric("MAE", f"{result.mae:.6f}")
-            metric_columns[1].metric("RMSE", f"{result.rmse:.6f}")
-            metric_columns[2].metric("Directional accuracy", f"{result.directional_accuracy:.1%}")
-            metric_columns[3].metric("Test observations", f"{test_observations:,}")
+            render_report(st, report)
+            st.caption(f"Test observations: {test_observations:,}")
 
             st.subheader("Top feature importances")
             importance = (

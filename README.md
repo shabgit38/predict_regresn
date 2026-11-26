@@ -36,7 +36,7 @@ The app loads your Kite API key and API secret from `.env`. The login callback s
 
 ## Results
 
-The app displays MAE, RMSE, directional accuracy, test-period boundaries, test observation count, and a chart/table of the most influential features from the fitted XGBoost model. These are historical holdout evaluation results, not a forecast of a specific future return.
+The app compares model MAE/RMSE with zero-return and training-mean baselines, reports a five-day block-bootstrap confidence interval for the MAE gap, and shows directional accuracy with an exact 95% confidence interval and p-value against 50%. It also reports an always-up baseline, test-period boundaries, test observation count, and the most influential features. These are historical holdout evaluation results, not a forecast of a specific future return; they do not include transaction costs or establish performance across multiple periods.
 
 Kite historical candles provide close prices, not split/dividend-adjusted closes. Each feature row is computed from information available at that row's market close. The target is the following trading session's return. The final row, which has no known next-session return, is excluded. Rows with incomplete rolling windows are also excluded.
 
