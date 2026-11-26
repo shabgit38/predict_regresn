@@ -84,7 +84,7 @@ with st.sidebar:
         st.link_button(
             "Login to Kite",
             login_url,
-            use_container_width=True,
+            width="stretch",
         )
 
 st.subheader("Model inputs")
@@ -116,7 +116,7 @@ with st.form("model_inputs"):
             value="5y",
             help="Format: number followed by d (days), mo (months), or y (years), e.g. 90d, 6mo, 5y.",
         )
-    submitted = st.form_submit_button("Run evaluation", type="primary", use_container_width=True)
+    submitted = st.form_submit_button("Run evaluation", type="primary", width="stretch")
 
 if submitted:
     ticker = ticker.strip().upper()
@@ -158,4 +158,4 @@ if submitted:
                 .reset_index()
             )
             st.bar_chart(importance.set_index("Feature"))
-            st.dataframe(importance, hide_index=True, use_container_width=True)
+            st.dataframe(importance, hide_index=True, width="stretch")
